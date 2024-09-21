@@ -5,20 +5,15 @@ import json
 import argparse
 import numpy
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Dropout
+from keras.layers import Dense, Activation
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelBinarizer
 from tensorflow.keras.optimizers import SGD
 import tensorflow as tf
-# New added layers
-from keras.regularizers import l2
-from keras.optimizers import Adam
-
 # Make reproducible as much as possible
 numpy.random.seed(1234)
 tf.random.set_seed(1234)
 python_random.seed(1234)
-# try change the ramdon seed number from 1234 to 42. It indeed dropped the metric to 0.754
 
 
 def create_arg_parser():
@@ -72,7 +67,7 @@ def vectorizer(words, embeddings):
 
 
 def create_model(X_train, Y_train):
-    '''Create the Keras model to use
+    '''Create the Keras model to use'''
     # Define settings, you might want to create cmd line args for them
     # (or some other more reproducible method)
     learning_rate = 0.0005
@@ -95,25 +90,6 @@ def create_model(X_train, Y_train):
 
     # Compile model using our settings, check for accuracy
     model.compile(loss=loss_function, optimizer=sgd, metrics=['accuracy'])
-    '''
-    model = Sequential()
-    # Increase the dense layer from 1 to 256, change the activation function from softmax to relu
-    model.add(Dense(256, input_dim=X_train.shape[1], activation='relu', kernel_regularizer=l2(0.01)))
-    model.add(Dropout(0.3))
-    model.add(Dense(128, activation='relu', kernel_regularizer=l2(0.01)))
-    model.add(Dropout(0.3))
-    
-    # ⬆️ double the numbers of the dense layers, see how it will be. Originally 256 for first layer, 128 for second layer
-    # Result down for a bit 
-    '''
-    model.add(Dense(128, activation='relu', kernel_regularizer=l2(0.01)))
-    model.add(Dropout(0.3))
-    '''
-    # Add a new layer may not be a good idea, causing the metrics drop a bit 
-    model.add(Dense(Y_train.shape[1], activation='softmax'))
-    optimizer = Adam(learning_rate=0.001) # Change from 0.001 to 0.005, the results not affected
-    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy']) # Change from categorical_crossentropy to MSe, results dropped from 0.768 to 0.762
-    
     return model
 
 
@@ -124,10 +100,8 @@ def train_model(model, X_train, Y_train, X_dev, Y_dev):
     # But of course it might still be nicer!
     # Don't be afraid to experiment with the values!
     verbose = 1
-    epochs = 10 # Change from 10 to 20, metric increased from 0.762 to 0.774
-    # Try epoch 15, metric dropped a bit
-    # keep epochs = 10 no change 
-    batch_size = 32 # doulble the batch size, dropped a bit 
+    epochs = 10
+    batch_size = 32
 
     # Finally fit the model to our data
     model.fit(X_train, Y_train, verbose=verbose, epochs=epochs,
