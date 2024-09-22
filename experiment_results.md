@@ -1,13 +1,13 @@
 |
-Experiment
+ Experiment
 |
-Model Architecture
+ Model Architecture
 | 
-Hyperparameters
+ Hyperparameters
 |
-Dev Set Accuracy
+ Dev Set Accuracy
 |
-Notes
+ Notes
 |
 |
 ---
@@ -21,12 +21,13 @@ Notes
 ___
 |
 |
-Baseline
-| Single Dense Layer
+ Baseline
 | 
-LR: 0.0005, Activation: softmax: Loss: MSE, Optimiser: SGD, Epoches: 10, Batch Size: 32
+ Single Dense Layer
+| 
+ LR: 0.0005, Activation: softmax: Loss: MSE, Optimiser: SGD, Epoches: 10, Batch Size: 32
 |
-31.6%
+ 31.6%
 |
-Initial performance, room for improvement
+ Initial performance, room for improvement
 |
