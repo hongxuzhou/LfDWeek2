@@ -123,11 +123,12 @@ def create_model(X_train, Y_train, args):
         optimizer = RMSprop(learning_rate = args.learning_rate)
         
     # Compile model using our settings, check for accuracy
-    model.compile(loss='catrgorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    # reference: https://www.tensorflow.org/api_docs/python/tf/keras/losses/categorical_crossentropy
     return model
 
 
-def train_model(model, X_train, Y_train, X_dev, Y_dev):
+def train_model(model, X_train, Y_train, X_dev, Y_dev, args):
     '''This funcition is modified to use cmd line arguments above and to implement early stopping'''
     early_stopping = EarlyStopping(monitor='val_loss', patience = 2, restore_best_weights = True) # Add early stopping
 
@@ -188,7 +189,7 @@ def main():
     model = create_model(X_train_emb, Y_bin_train, args)
 
     # Train the model
-    model = train_model(model, X_train_emb, Y_bin_train, X_dev_emb, Y_bin_dev)
+    model = train_model(model, X_train_emb, Y_bin_train, X_dev_emb, Y_bin_dev, args)
 
     # Calculate accuracy on the dev set
     dev_set_predict(model, X_dev_emb, Y_bin_dev)
