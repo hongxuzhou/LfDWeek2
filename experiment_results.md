@@ -10,4 +10,4 @@
 ||||||
 | Round 4 | Two layers | Hidden layers: 64/32, Dropout 0.15, Learning Rate: 0.0005, Batch Size: 64, Epochs: 30, Optimizer: Adam| 77.4%| HA! Overall performance decreases for a bit. Early stopping triggered at Epoch 12. For next round, more units will be added, and will try a different optimiser.| 
 ||||||
-| Round 5 | Two layers | Hidden layers: 128/64, Dropout: 0.15, Learning Rate: 0,00075, Batch Size: 64, Epochs: 30, Optimiser: RMSprop | 77.8% | Same with Round 3, guess it is the best I can do. Early stopping triggered at Epoch 8|
+| Round 5 | Two layers | Hidden layers: 128/64, Dropout: 0.15, Learning Rate: 0,00075, Batch Size: 64, Epochs: 30, Optimiser: RMSprop (also tried adam, dropped the performance to 77%)| 77.8% | Same with Round 3, guess it is the best I can do. Early stopping triggered at Epoch 8|
