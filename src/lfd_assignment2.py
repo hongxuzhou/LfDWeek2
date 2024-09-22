@@ -5,10 +5,11 @@ import json
 import argparse
 import numpy
 from keras.models import Sequential
-from keras.layers import Dense, Activation
+from keras.layers import Dense, Activation, Dropout # Add dropout
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelBinarizer
-from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.optimizers import SGD, Adam, RMSprop # Add two optimisers
+from keras.callbacks import EarlyStopping # Add early stopping
 import tensorflow as tf
 # Make reproducible as much as possible
 numpy.random.seed(1234)
@@ -22,12 +23,27 @@ def create_arg_parser():
                         help="Input file to learn from (default train_NE.txt)")
     parser.add_argument("-d", "--dev_file", default='dev_NE.txt', type=str,
                         help="Development set (default dev_NE.txt)")
-    parser.add_argument("-e", "--embeddings", default='glove_filtered.json', type=str,
+    parser.add_argument("-e", "--embeddings", default='/Users/hongxuzhou/LfD/week2/LfDWeek2/data/glove_filtered.json', type=str,
                         help="Embedding file we are using (default glove_filtered.json)")
     parser.add_argument("-ts", "--test_file", type=str,
                         help="Separate test set to read from, for which we do not have labels")
     parser.add_argument("-o", "--output_file", type=str,
                         help="Output file to which we write predictions for test set")
+    
+    # New arguments for hyperparameters
+    parser.add_argument("-hl", "--hidden_layers", nargs="+", type=int, default=[64],
+                        help="Number of units in hidden layers, support multiple hidden layers")
+    parser.add_argument('-dr', '--dropout', type=float, default=0.0,
+                        help='Dropout rate')
+    parser.add_argument('-lr', '--learning_rate', type=float, default=0.0005,
+                        help='Learning rate')
+    parser.add_argument('-bz', '--batch_size', type=int, default=32,
+                        help='Batch size')
+    parser.add_argument('-ep', '--epochs', type=int, default=10,
+                        help='Number of epochs')
+    parser.add_argument('-opt', '--optimizer', type=str, default='adam',
+                        choices=['adam', 'sgd', 'rmsprop'],
+                        help='Optimizer to use')
     args = parser.parse_args()
     if args.test_file and not args.output_file:
         raise ValueError("Always specify an output file if you specify a separate test set")
@@ -66,46 +82,61 @@ def vectorizer(words, embeddings):
     return numpy.array([embeddings[word] for word in words])
 
 
-def create_model(X_train, Y_train):
-    '''Create the Keras model to use'''
+def create_model(X_train, Y_train, args):
+    '''
+    Create and compile the model based on cmd line arguments.
+    '''
     # Define settings, you might want to create cmd line args for them
     # (or some other more reproducible method)
-    learning_rate = 0.0005
+    #learning_rate = 0.0005
     # Use softmax here for now, but you can experiment!
-    activation = "softmax"
+    #activation = "softmax"
     # Start with MSE, but again, experiment!
-    loss_function = 'mse'
+    #loss_function = 'mse'
     # SGD optimizer - yes, you should experiment here as well
-    sgd = SGD(learning_rate=learning_rate)
+    #sgd = SGD(learning_rate=learning_rate)
 
     # Now build the model
     model = Sequential()
-    # First dense layer has the number of features as input and the number of labels as total units
-    model.add(Dense(input_dim=X_train.shape[1], units=Y_train.shape[1]))
-    model.add(Activation(activation))
+    # Input layer
+    model.add(Dense(args.hidden_layers[0], input_dim=X_train.shape[1], activation = 'relu'))
+    model.add(Dropout(args.dropout)) # Add dropout for regularisation
+    
     # Potentially add your own layers here. Note that you have to change the dimensions of the prev layer
     # so that your final output layer has the correct number of nodes
     # You could also think about using Dropout!
-    # ...
-
+    
+    # Hidden layers
+    for units in args.hidden_layers[1:]:
+        model.add(Dense(units, activation='relu'))
+        model.add(Dropout(args.dropout))
+    
+    # Output layer
+    model.add(Dense(Y_train.shape[1], activation = 'softmax'))
+    
+    # Choose optimiser
+    if args.optimizer == 'adam':
+        optimizer = Adam(learning_rate = args.learning_rate)
+    elif args.optimizer == 'sgb':
+        optimizer = SGD(learning_rate = args.learning_rate)
+    elif args.optimizer == 'rmsprop':
+        optimizer = RMSprop(learning_rate = args.learning_rate)
+        
     # Compile model using our settings, check for accuracy
-    model.compile(loss=loss_function, optimizer=sgd, metrics=['accuracy'])
+    model.compile(loss='catrgorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
     return model
 
 
 def train_model(model, X_train, Y_train, X_dev, Y_dev):
-    '''Train the model here. Note the different settings you can experiment with!'''
-    # Yes I know I've asked you to set hyperparameters as cmd line values
-    # This week you don't have to submit your code, so it's not necessary
-    # But of course it might still be nicer!
-    # Don't be afraid to experiment with the values!
-    verbose = 1
-    epochs = 10
-    batch_size = 32
+    '''This funcition is modified to use cmd line arguments above and to implement early stopping'''
+    early_stopping = EarlyStopping(monitor='val_loss', patience = 2, restore_best_weights = True) # Add early stopping
 
     # Finally fit the model to our data
-    model.fit(X_train, Y_train, verbose=verbose, epochs=epochs,
-              batch_size=batch_size, validation_data=(X_dev, Y_dev))
+    model.fit(X_train, Y_train, verbose=1, 
+            epochs=args.epochs, 
+            batch_size=args.batch_size, 
+            validation_data=(X_dev, Y_dev), 
+            callbacks = [early_stopping])
     return model
 
 
@@ -123,7 +154,7 @@ def dev_set_predict(model, X_dev, Y_dev):
 
 def separate_test_set_predict(test_set, embeddings, encoder, model, output_file):
     '''Do prediction on a separate test set for which we do not have a gold standard.
-       Write predictions to a file'''
+    Write predictions to a file'''
     # Read and vectorize data
     test_emb = vectorizer([x.strip() for x in open(test_set, 'r')], embeddings)
     # Make predictions
@@ -136,7 +167,7 @@ def separate_test_set_predict(test_set, embeddings, encoder, model, output_file)
 
 
 def main():
-    '''Main function to train and test neural network given cmd line arguments'''
+    '''To put together all the functions above'''
     args = create_arg_parser()
 
     # Read in the data and embeddings
@@ -153,8 +184,8 @@ def main():
     Y_bin_train = encoder.fit_transform(Y_train)  # Use encoder.classes to find mapping back
     Y_bin_dev = encoder.fit_transform(Y_dev)
 
-    # Create model
-    model = create_model(X_train_emb, Y_bin_train)
+    # Create model ADUJUSTED!! to use cmd line arguments
+    model = create_model(X_train_emb, Y_bin_train, args)
 
     # Train the model
     model = train_model(model, X_train_emb, Y_bin_train, X_dev_emb, Y_bin_dev)
