@@ -117,7 +117,7 @@ def create_model(X_train, Y_train, args):
     # Choose optimiser
     if args.optimizer == 'adam':
         optimizer = Adam(learning_rate = args.learning_rate)
-    elif args.optimizer == 'sgb':
+    elif args.optimizer == 'sgd':
         optimizer = SGD(learning_rate = args.learning_rate)
     elif args.optimizer == 'rmsprop':
         optimizer = RMSprop(learning_rate = args.learning_rate)
