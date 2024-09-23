@@ -157,13 +157,17 @@ def separate_test_set_predict(test_set, embeddings, encoder, model, output_file)
     '''Do prediction on a separate test set for which we do not have a gold standard.
     Write predictions to a file'''
     # Read and vectorize data
-    test_emb = vectorizer([x.strip() for x in open(test_set, 'r')], embeddings)
+    #test_emb = vectorizer([x.strip() for x in open(test_set, 'r')], embeddings) original
+    test_emb = vectorizer([x.strip() for x in open(test_set, 'r', encoding="utf-8")], embeddings)
     # Make predictions
     pred = model.predict(test_emb)
     # Convert to numerical labels and back to string labels
     test_pred = numpy.argmax(pred, axis=1)
     labels = [encoder.classes_[idx] for idx in test_pred]
     # Finally write predictions to file
+    # Create output in the format as the input
+    output = [f'{word}\t{label}' for word, label in zip([x.strip() for x in open(test_set, 'r', encoding="utf-8")], labels)]
+    
     write_to_file(labels, output_file)
 
 
