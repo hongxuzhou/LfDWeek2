@@ -5,7 +5,7 @@ import json
 import argparse
 import numpy
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Dropout # Add dropout
+from keras.layers import Input, Dense, Activation, Dropout # Add input and dropout
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelBinarizer
 from tensorflow.keras.optimizers import SGD, Adam, RMSprop # Add two optimisers
@@ -79,7 +79,7 @@ def read_embeddings(embeddings_file):
 
 def vectorizer(words, embeddings):
     '''Turn words into embeddings, i.e. replace words by their corresponding embedding'''
-    return numpy.array([embeddings[word] for word in words])
+    return numpy.array([embeddings[word] if word in embeddings else numpy.zeros(300) for word in words])
 
 
 def create_model(X_train, Y_train, args):
@@ -98,8 +98,8 @@ def create_model(X_train, Y_train, args):
 
     # Now build the model
     model = Sequential()
-    # Input layer
-    model.add(Dense(args.hidden_layers[0], input_dim=X_train.shape[1], activation = 'relu'))
+    # Input layer 
+    model.add(Dense(args.hidden_layers[0], input_dim = input_dim, activation = 'relu'))
     model.add(Dropout(args.dropout)) # Add dropout for regularisation
     
     # Potentially add your own layers here. Note that you have to change the dimensions of the prev layer
@@ -112,7 +112,7 @@ def create_model(X_train, Y_train, args):
         model.add(Dropout(args.dropout))
     
     # Output layer
-    model.add(Dense(Y_train.shape[1], activation = 'softmax'))
+    model.add(Dense(output_dim, activation = 'softmax'))
     
     # Choose optimiser
     if args.optimizer == 'adam':
@@ -151,20 +151,29 @@ def dev_set_predict(model, X_dev, Y_dev):
     Y_dev = numpy.argmax(Y_dev, axis=1)
     acc = round(accuracy_score(Y_dev, Y_pred), 3)
     print(f"Accuracy on dev set: {acc}")
+    
+    
 
 
 def separate_test_set_predict(test_set, embeddings, encoder, model, output_file):
     '''Do prediction on a separate test set for which we do not have a gold standard.
     Write predictions to a file'''
     # Read and vectorize data
-    test_emb = vectorizer([x.strip() for x in open(test_set, 'r')], embeddings)
+    
+    with open(test_set, 'r', encoding='utf-8') as f:
+        test_words = [line.strip() for line in f]
+        
+    test_emb = vectorizer(test_words, embeddings)
     # Make predictions
     pred = model.predict(test_emb)
     # Convert to numerical labels and back to string labels
     test_pred = numpy.argmax(pred, axis=1)
     labels = [encoder.classes_[idx] for idx in test_pred]
     # Finally write predictions to file
-    write_to_file(labels, output_file)
+    with open(output_file, 'w', encoding = 'utf-8') as f:
+        for label in labels:
+            f.write(f'{label}\n')
+    
 
 
 def main():
@@ -186,6 +195,8 @@ def main():
     Y_bin_dev = encoder.fit_transform(Y_dev)
 
     # Create model ADUJUSTED!! to use cmd line arguments
+    input_dim = X_train_emb.shape[1] # Should be 300
+    output_dim = Y_bin_train.shape[1] # The number of classes
     model = create_model(X_train_emb, Y_bin_train, args)
 
     # Train the model
@@ -196,7 +207,7 @@ def main():
 
     # If we specified a test set, there are no gold labels available
     # Do predictions and print them to a separate file
-    if args.test_file:
+    if args.test_file and args.output_file:
         separate_test_set_predict(args.test_file, embeddings, encoder, model, args.output_file)
 
 
